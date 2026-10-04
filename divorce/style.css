@@ -11,10 +11,15 @@
     --overdue: #b42318;
     --soon-bg: #fff4e0;
     --soon: #a15c00;
+    --on-primary: #ffffff;
+    --toast-bg: #1f2933;
+    --toast-fg: #ffffff;
+    --shadow: rgba(15, 23, 42, 0.18);
+    --scrim: rgba(15, 23, 42, 0.45);
 }
 
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
         --bg: #14181d;
         --surface: #1d232a;
         --text: #e4e7eb;
@@ -27,10 +32,39 @@
         --overdue: #f2928a;
         --soon-bg: #3a2c12;
         --soon: #f0b860;
+        --on-primary: #0d1b2a;
+        --toast-bg: #e4e7eb;
+        --toast-fg: #14181d;
+        --shadow: rgba(0, 0, 0, 0.5);
+        --scrim: rgba(0, 0, 0, 0.6);
+        color-scheme: dark;
     }
 }
 
+:root[data-theme="dark"] {
+    --bg: #14181d;
+    --surface: #1d232a;
+    --text: #e4e7eb;
+    --muted: #9aa5b1;
+    --border: #323f4b;
+    --primary: #5a9be0;
+    --primary-hover: #74abe6;
+    --danger: #e5675a;
+    --overdue-bg: #3b1d1b;
+    --overdue: #f2928a;
+    --soon-bg: #3a2c12;
+    --soon: #f0b860;
+    --on-primary: #0d1b2a;
+    --toast-bg: #e4e7eb;
+    --toast-fg: #14181d;
+    --shadow: rgba(0, 0, 0, 0.5);
+    --scrim: rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
+}
+
 * { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
 
 body {
     margin: 0;
@@ -72,11 +106,11 @@ button, .button-like {
 
 button:hover, .button-like:hover { border-color: var(--primary); }
 
-button.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+button.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
 button.primary:hover { background: var(--primary-hover); }
 button.danger { color: var(--danger); border-color: var(--danger); margin-left: auto; }
 
-.nav-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.nav-btn.active { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
 
 input, select, textarea {
     font: inherit;
@@ -125,7 +159,7 @@ input[type="checkbox"] { width: auto; }
 }
 
 .chip .count { font-weight: bold; margin-left: 4px; }
-.chip.selected { background: var(--primary); border-color: var(--primary); color: #fff; }
+.chip.selected { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
 
 .filters {
     display: grid;
@@ -238,16 +272,72 @@ input.invalid { border-color: var(--danger); }
     left: 50%;
     transform: translateX(-50%);
     padding: 10px 20px;
-    background: #1f2933;
-    color: #fff;
+    background: var(--toast-bg);
+    color: var(--toast-fg);
     border-radius: 6px;
     font-size: 14px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px var(--shadow);
+    z-index: 20;
 }
 
-.toast.error { background: var(--danger); }
+.toast.error { background: var(--danger); color: var(--on-primary); }
 
 @media (max-width: 600px) {
     .field { grid-template-columns: 1fr; gap: 4px; }
     .field > label, .field > .label { padding-top: 0; }
+}
+
+h3 { font-size: 15px; margin: 20px 0 8px; }
+
+.panel {
+    margin-top: 16px;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    max-width: 760px;
+}
+
+.panel h3 { margin-top: 0; }
+
+#importText, #exportText { max-width: 760px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+
+.first-run {
+    padding: 24px;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+}
+
+.first-run h2 { margin-top: 0; }
+.first-run p { margin: 0 0 12px; color: var(--muted); }
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: var(--scrim);
+    z-index: 10;
+}
+
+.dialog {
+    width: 100%;
+    max-width: 420px;
+    padding: 20px;
+    background: var(--surface);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px var(--shadow);
+}
+
+.dialog p { margin: 0 0 16px; }
+.dialog .actions { justify-content: flex-end; }
+
+button.danger-fill { background: var(--danger); border-color: var(--danger); color: var(--on-primary); }
+
+button:focus-visible, .button-like:focus-within, input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }

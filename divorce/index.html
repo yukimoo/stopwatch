@@ -71,7 +71,15 @@
                     <tbody id="caseRows"></tbody>
                 </table>
             </div>
-            <p class="empty" id="emptyMsg" hidden>該当する案件はありません。</p>
+            <p class="empty" id="emptyMsg" hidden>条件に合う案件はありません。</p>
+            <div class="first-run" id="firstRun" hidden>
+                <h2>まだ案件が登録されていません</h2>
+                <p>「新規登録」から最初の案件を登録してください。使い方を確かめたい場合は、サンプル案件を表示できます。</p>
+                <div class="actions">
+                    <button type="button" class="primary" id="firstAdd">案件を登録する</button>
+                    <button type="button" id="loadSamples">サンプル案件を表示</button>
+                </div>
+            </div>
         </section>
 
         <!-- 案件フォーム -->
@@ -150,12 +158,40 @@
                 <button type="button" id="exportJson">バックアップ（JSON）</button>
                 <button type="button" id="exportCsv">CSV出力</button>
                 <label class="button-like">
-                    復元（JSON読込）
+                    ファイルから復元
                     <input type="file" id="importJson" accept="application/json,.json" hidden>
                 </label>
             </div>
+
+            <div class="panel" id="exportPanel" hidden>
+                <h3 id="exportTitle">バックアップ</h3>
+                <p class="hint">下の内容をコピーしてメモ帳などに保存してください。「ファイルに保存」は環境によっては動作しません。</p>
+                <textarea id="exportText" rows="10" readonly></textarea>
+                <div class="actions">
+                    <button type="button" class="primary" id="exportCopy">コピー</button>
+                    <button type="button" id="exportSave">ファイルに保存</button>
+                    <button type="button" id="exportClose">閉じる</button>
+                </div>
+            </div>
+
+            <h3>貼り付けて復元</h3>
+            <p class="hint">バックアップ（JSON）の内容を貼り付けて「復元」を押すと、現在のデータと置き換わります。</p>
+            <textarea id="importText" rows="5" placeholder='{"version":1, ...}'></textarea>
+            <div class="actions">
+                <button type="button" id="importPaste">復元</button>
+            </div>
         </section>
     </main>
+
+    <div class="overlay" id="confirmOverlay" hidden>
+        <div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirmMsg">
+            <p id="confirmMsg"></p>
+            <div class="actions">
+                <button type="button" id="confirmCancel">キャンセル</button>
+                <button type="button" class="danger-fill" id="confirmOk">OK</button>
+            </div>
+        </div>
+    </div>
 
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 

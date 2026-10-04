@@ -98,6 +98,24 @@ function fillSelect(select, values, blankLabel) {
     values.forEach((v) => select.add(new Option(v, v)));
 }
 
+function askConfirm(message, okLabel = 'OK') {
+    return new Promise((resolve) => {
+        const overlay = $('confirmOverlay');
+        $('confirmMsg').textContent = message;
+        $('confirmOk').textContent = okLabel;
+        overlay.hidden = false;
+        $('confirmCancel').focus();
+        const close = (result) => {
+            overlay.hidden = true;
+            $('confirmOk').onclick = $('confirmCancel').onclick = overlay.onkeydown = null;
+            resolve(result);
+        };
+        $('confirmOk').onclick = () => close(true);
+        $('confirmCancel').onclick = () => close(false);
+        overlay.onkeydown = (e) => { if (e.key === 'Escape') close(false); };
+    });
+}
+
 let toastTimer;
 function showToast(message, isError = false) {
     const toast = $('toast');
@@ -214,7 +232,9 @@ function renderList() {
             <td>${escapeHtml(c.counter_lawyer)}</td>
         </tr>`;
     }).join('');
-    $('emptyMsg').hidden = rows.length > 0;
+    $('emptyMsg').hidden = rows.length > 0 || cases.length === 0;
+    $('firstRun').hidden = cases.length > 0;
+    $('caseTable').closest('.table-wrap').hidden = cases.length === 0;
 }
 
 // ===== フォーム =====
@@ -294,9 +314,9 @@ function handleSubmit(event) {
     showView('list');
 }
 
-function handleDelete() {
+async function handleDelete() {
     const c = cases.find((x) => x.id === editingId);
-    if (!c || !confirm(`「${c.client_name}」の案件を削除しますか？この操作は取り消せません。`)) return;
+    if (!c || !await askConfirm(`「${c.client_name}」の案件を削除しますか？この操作は取り消せません。`, '削除する')) return;
     const next = cases.filter((x) => x.id !== editingId);
     if (!save(CASES_KEY, next)) return;
     cases = next;
@@ -328,9 +348,9 @@ function addStaff(event) {
     renderStaff();
 }
 
-function removeStaff(index) {
+async function removeStaff(index) {
     const name = staff[index];
-    if (!confirm(`担当者「${name}」を選択肢から削除しますか？（既存案件の担当者欄はそのまま残ります）`)) return;
+    if (!await askConfirm(`担当者「${name}」を選択肢から削除しますか？（既存案件の担当者欄はそのまま残ります）`, '削除する')) return;
     const next = staff.filter((_, i) => i !== index);
     if (!save(STAFF_KEY, next)) return;
     staff = next;
@@ -338,6 +358,26 @@ function removeStaff(index) {
 }
 
 // ===== 設定：入出力 =====
+let exportFile = null;
+
+function showExport(title, filename, content, type) {
+    exportFile = { filename, content, type };
+    $('exportTitle').textContent = title;
+    $('exportText').value = content.replace(/^\uFEFF/, '');
+    $('exportPanel').hidden = false;
+    $('exportText').scrollIntoView({ block: 'nearest' });
+}
+
+async function copyExport() {
+    try {
+        await navigator.clipboard.writeText($('exportText').value);
+        showToast('コピーしました。');
+    } catch {
+        $('exportText').select();
+        showToast('テキストを選択しました。Ctrl+C（⌘+C）でコピーしてください。');
+    }
+}
+
 function download(filename, content, type) {
     const blob = new Blob([content], { type });
     const url = URL.createObjectURL(blob);
@@ -352,7 +392,7 @@ function download(filename, content, type) {
 
 function exportJson() {
     const data = { version: 1, exportedAt: new Date().toISOString(), staff, cases };
-    download(`divorce_cases_${todayStr()}.json`, JSON.stringify(data, null, 2), 'application/json');
+    showExport('バックアップ（JSON）', `divorce_cases_${todayStr()}.json`, JSON.stringify(data, null, 2), 'application/json');
 }
 
 function exportCsv() {
@@ -366,7 +406,7 @@ function exportCsv() {
             .map(cell).join(','));
     });
     // Excel で文字化けしないよう BOM を付与
-    download(`divorce_cases_${todayStr()}.csv`, '﻿' + lines.join('\r\n'), 'text/csv');
+    showExport('CSV', `divorce_cases_${todayStr()}.csv`, '\uFEFF' + lines.join('\r\n'), 'text/csv');
 }
 
 function normalizeCase(raw) {
@@ -397,31 +437,59 @@ function importJson(event) {
     event.target.value = '';
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
-        let data;
-        try {
-            data = JSON.parse(reader.result);
-        } catch {
-            showToast('JSONファイルを読み込めませんでした。', true);
-            return;
-        }
-        const rawCases = Array.isArray(data) ? data : data?.cases;
-        if (!Array.isArray(rawCases)) {
-            showToast('案件データが見つかりません。', true);
-            return;
-        }
-        const imported = rawCases.map(normalizeCase).filter(Boolean);
-        const importedStaff = Array.isArray(data?.staff)
-            ? [...new Set(data.staff.filter((s) => typeof s === 'string' && s.trim()).map((s) => s.trim()))]
-            : staff;
-        if (!confirm(`${imported.length}件の案件を読み込みます。現在のデータ（${cases.length}件）は置き換えられます。よろしいですか？`)) return;
-        if (!save(CASES_KEY, imported) || !save(STAFF_KEY, importedStaff)) return;
-        cases = imported;
-        staff = importedStaff;
-        renderStaff();
-        showToast(`${imported.length}件の案件を復元しました。`);
-    };
+    reader.onload = () => restoreFromText(reader.result);
     reader.readAsText(file);
+}
+
+async function restoreFromText(text) {
+    let data;
+    try {
+        data = JSON.parse(text);
+    } catch {
+        showToast('JSONとして読み込めませんでした。内容を確認してください。', true);
+        return;
+    }
+    const rawCases = Array.isArray(data) ? data : data?.cases;
+    if (!Array.isArray(rawCases)) {
+        showToast('案件データが見つかりません。', true);
+        return;
+    }
+    const imported = rawCases.map(normalizeCase).filter(Boolean);
+    const importedStaff = Array.isArray(data?.staff)
+        ? [...new Set(data.staff.filter((s) => typeof s === 'string' && s.trim()).map((s) => s.trim()))]
+        : staff;
+    if (!await askConfirm(`${imported.length}件の案件を読み込みます。現在のデータ（${cases.length}件）は置き換えられます。よろしいですか？`, '復元する')) return;
+    if (!save(CASES_KEY, imported) || !save(STAFF_KEY, importedStaff)) return;
+    cases = imported;
+    staff = importedStaff;
+    renderStaff();
+    $('importText').value = '';
+    showToast(`${imported.length}件の案件を復元しました。`);
+}
+
+// ===== サンプルデータ =====
+function addDays(n) {
+    const d = new Date(Date.parse(todayStr() + 'T00:00:00Z') + n * 86400000);
+    return d.toISOString().slice(0, 10);
+}
+
+function loadSamples() {
+    const now = new Date().toISOString();
+    const sample = (client_name, status, client_position, counter_lawyer, key_issues, days, deadline_type, notes) => ({
+        id: newId(), client_name, status, client_position, counter_lawyer, key_issues,
+        lawyer: '', paralegal: '', next_deadline: days === null ? '' : addDays(days), deadline_type, notes,
+        createdAt: now, updatedAt: now
+    });
+    const next = [
+        sample('【サンプル】山本 花子', '7.離婚調停進行中', '妻', 'あり', ['親権', '養育費', '面会交流'], -2, '書面提出期限', '主張書面の提出が遅れている例'),
+        sample('【サンプル】田中 一郎', '4.協議交渉(書面・面談)', '夫', 'なし', ['財産分与', '年金分割'], 5, '回答期限', '相手方からの回答待ち'),
+        sample('【サンプル】佐々木 美咲', '2.事実関係整理・情報収集', '妻', '不明', ['DV・モラハラ', '慰謝料', '婚姻費用'], 21, 'その他', '保護命令の要否を検討'),
+        sample('【サンプル】鈴木 健', '11.精算・完了', '夫', 'あり', ['養育費'], null, '', '')
+    ];
+    if (!save(CASES_KEY, next)) return;
+    cases = next;
+    renderList();
+    showToast('サンプル案件を4件表示しました。不要になったら各案件を削除してください。');
 }
 
 // ===== 初期化 =====
@@ -491,6 +559,18 @@ function init() {
     $('exportJson').addEventListener('click', exportJson);
     $('exportCsv').addEventListener('click', exportCsv);
     $('importJson').addEventListener('change', importJson);
+    $('importPaste').addEventListener('click', () => {
+        const text = $('importText').value.trim();
+        if (text) restoreFromText(text);
+        else showToast('バックアップのJSONを貼り付けてください。', true);
+    });
+    $('exportCopy').addEventListener('click', copyExport);
+    $('exportSave').addEventListener('click', () => {
+        if (exportFile) download(exportFile.filename, exportFile.content, exportFile.type);
+    });
+    $('exportClose').addEventListener('click', () => { $('exportPanel').hidden = true; });
+    $('loadSamples').addEventListener('click', loadSamples);
+    $('firstAdd').addEventListener('click', () => openForm());
 
     // 別タブでの変更を反映
     window.addEventListener('storage', (e) => {
