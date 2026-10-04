@@ -1,0 +1,209 @@
+/*
+ * Author       : 1014
+ * Generated on : 04-Oct-2026
+ * Version      : 1.0
+ */
+application "離婚案件管理"
+{
+	date format = "yyyy-MM-dd"
+	time zone = "Asia/Tokyo"
+	time format = "24-hr"
+
+	forms
+	{
+		form divorce_case
+		{
+			displayname = "離婚案件"
+			success message = "案件情報を保存しました。"
+
+			must have client_name
+			(
+				type = text
+				displayname = "依頼者名"
+			)
+			must have status
+			(
+				type = picklist
+				displayname = "ステータス"
+				values = {"0.受任・初期選任","1.着手・受任通知","2.事実関係整理・情報収集","3.財産分与整理・協議財産開示","4.協議交渉(書面・面談)","5.協議書作成・公正証書化","6.離婚調停準備","7.離婚調停進行中","8.訴訟・審判移行","9.和解・判決","10.履行確保・離婚届出","11.精算・完了"}
+				initial value = "0.受任・初期選任"
+			)
+			client_position
+			(
+				type = picklist
+				displayname = "依頼者の立場"
+				values = {"妻","夫"}
+			)
+			counter_lawyer
+			(
+				type = picklist
+				displayname = "相手方代理人"
+				values = {"不明","あり","なし"}
+				initial value = "不明"
+			)
+			key_issues
+			(
+				type = list
+				displayname = "主な争点"
+				values = {"親権","養育費","財産分与","慰謝料","年金分割","DV・モラハラ","面会交流","婚姻費用"}
+			)
+			lawyer
+			(
+				type = picklist
+				displayname = "担当弁護士"
+				module = users
+				displayformat = [username]
+				sortorder = ascending
+				personal data = true
+			)
+			paralegal
+			(
+				type = picklist
+				displayname = "担当事務員"
+				module = users
+				displayformat = [username]
+				sortorder = ascending
+				personal data = true
+			)
+			next_deadline
+			(
+				type = date
+				displayname = "次回期日・期限"
+			)
+			deadline_type
+			(
+				type = picklist
+				displayname = "期日の種類"
+				values = {"調停期日","書面提出期限","回答期限","口頭弁論期日","その他"}
+			)
+			notes
+			(
+				type = textarea
+				displayname = "備考・メモ"
+			)
+
+			actions
+			{
+				on add
+				{
+					submit
+					(
+						type = submit
+						displayname = "保存"
+					)
+					reset
+					(
+						type = reset
+						displayname = "リセット"
+					)
+				}
+				on edit
+				{
+					update
+					(
+						type = submit
+						displayname = "更新"
+					)
+					cancel
+					(
+						type = cancel
+						displayname = "キャンセル"
+					)
+				}
+			}
+		}
+	}
+
+	web
+	{
+		forms
+		{
+			form divorce_case
+			{
+				label placement = left
+			}
+		}
+		menu
+		{
+			space Space
+			{
+				displayname = "Space"
+				icon = "objects-spaceship"
+
+				section Section_1
+				{
+					displayname = "離婚案件"
+					icon = "business-laptop-71"
+					form divorce_case
+					{
+						icon = "ui-1-bold-add"
+					}
+				}
+				section ZC_App_Preferences
+				{
+					displayname = "App Preferences"
+					icon = "design-app"
+					systemcomponent
+					{
+						type = localization
+						displayname = "Language Selection"
+						icon = "education-language"
+					}
+					systemcomponent
+					{
+						type = connection
+						displayname = "Integrations"
+						icon = "tech-2-connection"
+					}
+				}
+				section ZC_Approvals
+				{
+					displayname = "Approvals"
+					icon = "ui-2-hourglass"
+					systemcomponent
+					{
+						type = approval
+						approval status = pending
+						displayname = "Pending Tasks"
+						icon = "ui-2-hourglass"
+					}
+					systemcomponent
+					{
+						type = approval
+						approval status = completed
+						displayname = "Completed Tasks"
+						icon = "design-todo"
+					}
+				}
+				section SharedAnalytics_Section
+				{
+					type = shared_user_report_section
+					displayname = "Reports"
+					icon = "business-chart-bar-33"
+				}
+			}
+			preference
+			{
+				icon
+				{
+					style = solid
+					show = {space,section,component}
+				}
+			}
+		}
+		customize
+		{
+			new theme = 4
+			font = "lato"
+			color options
+			{
+				color = "1"
+			}
+			logo
+			{
+				preference = "none"
+				placement = "left"
+			}
+		}
+	}
+}
