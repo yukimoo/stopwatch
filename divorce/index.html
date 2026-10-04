@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>離婚案件管理</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>離婚案件管理</h1>
+        <nav>
+            <button type="button" class="nav-btn" data-view="list">案件一覧</button>
+            <button type="button" class="nav-btn" data-view="form" id="navAdd">新規登録</button>
+            <button type="button" class="nav-btn" data-view="settings">設定</button>
+        </nav>
+    </header>
+
+    <main>
+        <!-- 案件一覧 -->
+        <section id="view-list" class="view">
+            <div class="summary">
+                <button type="button" class="card" data-deadline-filter="">
+                    <span class="card-label">進行中の案件</span>
+                    <span class="card-value" id="sumActive">0</span>
+                </button>
+                <button type="button" class="card card-overdue" data-deadline-filter="overdue">
+                    <span class="card-label">期限超過</span>
+                    <span class="card-value" id="sumOverdue">0</span>
+                </button>
+                <button type="button" class="card card-soon" data-deadline-filter="soon">
+                    <span class="card-label">7日以内の期日</span>
+                    <span class="card-value" id="sumSoon">0</span>
+                </button>
+                <div class="card card-static">
+                    <span class="card-label">完了</span>
+                    <span class="card-value" id="sumDone">0</span>
+                </div>
+            </div>
+
+            <div class="status-chips" id="statusChips"></div>
+
+            <div class="filters">
+                <input type="search" id="fSearch" placeholder="依頼者名・備考で検索">
+                <select id="fStatus"><option value="">ステータス：すべて</option></select>
+                <select id="fLawyer"><option value="">担当弁護士：すべて</option></select>
+                <select id="fIssue"><option value="">争点：すべて</option></select>
+                <select id="fDeadline">
+                    <option value="">期日：すべて</option>
+                    <option value="overdue">期限超過</option>
+                    <option value="soon">7日以内</option>
+                </select>
+                <label class="check"><input type="checkbox" id="fShowDone"> 完了案件も表示</label>
+            </div>
+
+            <div class="table-wrap">
+                <table id="caseTable">
+                    <thead>
+                        <tr>
+                            <th data-sort="client_name">依頼者名</th>
+                            <th data-sort="client_position">立場</th>
+                            <th data-sort="status">ステータス</th>
+                            <th>主な争点</th>
+                            <th data-sort="lawyer">担当弁護士</th>
+                            <th data-sort="paralegal">担当事務員</th>
+                            <th data-sort="next_deadline">次回期日・期限</th>
+                            <th data-sort="deadline_type">期日の種類</th>
+                            <th data-sort="counter_lawyer">相手方代理人</th>
+                        </tr>
+                    </thead>
+                    <tbody id="caseRows"></tbody>
+                </table>
+            </div>
+            <p class="empty" id="emptyMsg" hidden>該当する案件はありません。</p>
+        </section>
+
+        <!-- 案件フォーム -->
+        <section id="view-form" class="view" hidden>
+            <h2 id="formTitle">離婚案件</h2>
+            <form id="caseForm" novalidate>
+                <div class="field">
+                    <label for="client_name">依頼者名 <span class="req">*</span></label>
+                    <div>
+                        <input type="text" id="client_name" name="client_name" maxlength="255">
+                        <p class="error" id="err_client_name" hidden>依頼者名を入力してください。</p>
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="status">ステータス <span class="req">*</span></label>
+                    <select id="status" name="status"></select>
+                </div>
+                <div class="field">
+                    <label for="client_position">依頼者の立場</label>
+                    <select id="client_position" name="client_position"></select>
+                </div>
+                <div class="field">
+                    <label for="counter_lawyer">相手方代理人</label>
+                    <select id="counter_lawyer" name="counter_lawyer"></select>
+                </div>
+                <div class="field">
+                    <span class="label">主な争点</span>
+                    <div class="checks" id="key_issues"></div>
+                </div>
+                <div class="field">
+                    <label for="lawyer">担当弁護士</label>
+                    <select id="lawyer" name="lawyer"></select>
+                </div>
+                <div class="field">
+                    <label for="paralegal">担当事務員</label>
+                    <select id="paralegal" name="paralegal"></select>
+                </div>
+                <div class="field">
+                    <label for="next_deadline">次回期日・期限</label>
+                    <input type="date" id="next_deadline" name="next_deadline">
+                </div>
+                <div class="field">
+                    <label for="deadline_type">期日の種類</label>
+                    <select id="deadline_type" name="deadline_type"></select>
+                </div>
+                <div class="field">
+                    <label for="notes">備考・メモ</label>
+                    <textarea id="notes" name="notes" rows="5"></textarea>
+                </div>
+                <p class="hint" id="staffHint" hidden>担当者の選択肢は「設定」で登録できます。</p>
+
+                <div class="actions" id="addActions">
+                    <button type="submit" class="primary">保存</button>
+                    <button type="reset">リセット</button>
+                </div>
+                <div class="actions" id="editActions" hidden>
+                    <button type="submit" class="primary">更新</button>
+                    <button type="button" id="cancelBtn">キャンセル</button>
+                    <button type="button" id="deleteBtn" class="danger">削除</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- 設定 -->
+        <section id="view-settings" class="view" hidden>
+            <h2>担当者（弁護士・事務員）</h2>
+            <form id="staffForm" class="inline-form">
+                <input type="text" id="staffName" placeholder="氏名" maxlength="100">
+                <button type="submit" class="primary">追加</button>
+            </form>
+            <ul id="staffList" class="staff-list"></ul>
+
+            <h2>データ</h2>
+            <p class="hint">データはこのブラウザ内（localStorage）にのみ保存されます。定期的にバックアップしてください。</p>
+            <div class="actions">
+                <button type="button" id="exportJson">バックアップ（JSON）</button>
+                <button type="button" id="exportCsv">CSV出力</button>
+                <label class="button-like">
+                    復元（JSON読込）
+                    <input type="file" id="importJson" accept="application/json,.json" hidden>
+                </label>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
